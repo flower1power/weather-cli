@@ -1,4 +1,4 @@
-import axios, { Axios, AxiosError } from 'axios';
+import axios from 'axios';
 import { getKeyValue, TOKEN_DICTIONARY } from './storage.service.js';
 
 export const getIcon = (icon) => {
