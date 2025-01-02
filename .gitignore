@@ -1,1 +1,4 @@
-node-module
+node_modules
+dist
+.npmignore
+.vscode
