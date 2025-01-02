@@ -21,6 +21,8 @@ export const getIcon = (icon) => {
       return '❄️';
     case '50':
       return '🌫️';
+    default:
+      return '❓';
   }
 };
 
@@ -40,7 +42,7 @@ export const getGeoCoodiantes = async (city, token) => {
   return { lat: data[0].lat, lon: data[0].lon };
 };
 
-export const getWeather = async () => {
+export const getWeather = async (lang = 'ru') => {
   const token =
     process.env.TOKEN ?? (await getKeyValue(TOKEN_DICTIONARY.token));
 
@@ -48,24 +50,31 @@ export const getWeather = async () => {
     throw new Error('Не указан токен, задайте его через команду -t [API_KEY]');
   }
 
-  const city = process.env.CITY ?? (await getKeyValue(TOKEN_DICTIONARY.city));
+  const cities = process.env.CITY ?? (await getKeyValue(TOKEN_DICTIONARY.city));
 
-  if (!city) {
-    throw new Error('Не указан город, задайте его через команду -s [CITY]');
+  const results = [];
+
+  for (const city of cities) {
+    try {
+      const coordinates = await getGeoCoodiantes(city, token);
+
+      const url = new URL('https://api.openweathermap.org/data/2.5/weather');
+
+      const { data } = await axios.get(`${url}`, {
+        params: {
+          lat: coordinates.lat,
+          lon: coordinates.lon,
+          appid: token,
+          units: lang === 'ru' ? 'metric' : 'standard',
+          lang,
+        },
+      });
+
+      results.push({ city, data });
+    } catch (e) {
+      results.push({ city, error: e.message });
+    }
   }
 
-  const coordinates = await getGeoCoodiantes(city, token);
-
-  const url = new URL('https://api.openweathermap.org/data/2.5/weather');
-  const { data } = await axios.get(`${url}`, {
-    params: {
-      lat: coordinates.lat,
-      lon: coordinates.lon,
-      appid: token,
-      units: 'metric',
-      lang: 'ru',
-    },
-  });
-
-  return data;
+  return results;
 };

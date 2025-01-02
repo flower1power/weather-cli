@@ -31,31 +31,50 @@ const saveToken = async (token) => {
   }
 };
 
-const saveCity = async (city) => {
-  if (!city.length) {
-    printError(`Не передан город`);
+const saveCity = async (cities) => {
+  if (!cities || cities.length === 0) {
+    printError(`Не переданы города`);
     return;
   }
-
   const token = await getKeyValue(TOKEN_DICTIONARY.token);
-  const geo = await getGeoCoodiantes(city, token);
 
-  if (geo.length === 0) {
-    printError(`Не верно указан город`);
+  if (!token) {
+    printError('Не указан токен, задайте его через команду -t [API_KEY]');
+    return;
+  }
+  const validCities = [];
+
+  for (const city of cities) {
+    try {
+      const geo = await getGeoCoodiantes(city, token);
+
+      if (geo.lat && geo.lon) {
+        validCities.push(city);
+      }
+    } catch (e) {
+      printError(`Город "${city}" не найден или указан некорректно`);
+    }
   }
 
-  try {
-    await saveKeyValue(TOKEN_DICTIONARY.city, city);
-    printSuccess('Город сохранен');
-  } catch (e) {
-    printError(`Ошибка: ${e.message}`);
+  if (validCities.length > 0) {
+    try {
+      await saveKeyValue(TOKEN_DICTIONARY.city, validCities);
+      printSuccess(`Города сохранены: ${validCities.join(', ')}`);
+    } catch (e) {
+      printError(`Ошибка сохранения городов: ${e.message}`);
+    }
+  } else {
+    printError('Ни один из переданных городов не был найден');
   }
 };
 
-const getForcast = async () => {
+const getForcast = async (lang) => {
   try {
-    const weather = await getWeather();
-    printWeather(weather, getIcon(weather.weather[0].icon));
+    const weathers = await getWeather(lang);
+
+    for (const el of weathers) {
+      printWeather(el, getIcon(el.data.weather[0].icon), lang);
+    }
   } catch (e) {
     if (e?.response?.status === 401) {
       printError('Не верно указан токен');
@@ -72,12 +91,13 @@ const initCLI = async () => {
     return printHelp();
   }
   if (args.s) {
-    return saveCity(args.s);
+    const cities = Array.isArray(args.s) ? args.s : [args.s];
+    return saveCity(cities);
   }
   if (args.t) {
     return saveToken(args.t);
   }
-  getForcast();
+  getForcast(args.l);
 };
 
 initCLI();
