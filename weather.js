@@ -3,6 +3,7 @@ import { getArgs } from './helpers/args.js';
 import { printHelp, printSuccess, printError } from './services/log.service.js';
 import { saveKeyValue, TOKEN_DICTIONARY } from './services/storage.service.js';
 import { getWeather } from './services/api.service.js';
+import { AxiosError } from 'axios';
 
 const saveToken = async (token) => {
   if (!token.length) {
@@ -18,17 +19,32 @@ const saveToken = async (token) => {
   }
 };
 
+const getForcast = async () => {
+  try {
+    const weather = await getWeather('krasnod');
+    console.log(weather);
+  } catch (e) {
+    if (e?.response?.status === 401) {
+      printError('Не верно указан токен');
+    } else {
+      printError(e.message);
+    }
+  }
+};
+
 const initCLI = async () => {
   const args = getArgs(process.argv);
+
   if (args.h) {
     printHelp();
   }
   if (args.s) {
-    await getWeather(args.s);
+    // await getForcast(args.s);
   }
   if (args.t) {
     return saveToken(args.t);
   }
+  getForcast();
   // Weather
 };
 
